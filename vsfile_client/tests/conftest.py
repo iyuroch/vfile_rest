@@ -10,15 +10,17 @@
 
 import pytest
 import vfile_server
+import time
 from multiprocessing import Process
 
 
 def pytest_sessionstart(session):
     """ before session.main() is called. """
-    p = Process(target=vfile_server.app, args=("0.0.0.0", "8080"))
+    p = Process(target=vfile_server.app, args=("127.0.0.1", "8080"))
     p.daemon = True
     p.start()
-    pass
+    # we need to wait until server is started
+    time.sleep(0.5)
 
 def pytest_sessionfinish(session, exitstatus):
     """ whole test run finishes. """

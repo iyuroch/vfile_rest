@@ -1,9 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import asyncio
-import aiohttp
-import ujson
+import requests
+import ujson as json
 
 """
 This package provide interface for vfile_server module
@@ -13,41 +12,79 @@ class VFile():
     
     def __init__(self, server_addr):
         self._server_addr = server_addr
-        self.session = aiohttp.ClientSession(json_serialize=ujson.dumps)
+        # self.session = aiohttp.ClientSession(json_serialize=ujson.dumps)
 
     def __enter__(self):
         return self
 
     def __exit__(self ,type, value, traceback):
-        # TODO: expand if needed handling session etc.
         pass
 
-    async def mkfile(self, filename):
-        # TODO: exception if exists
-        # create file on server side
-        # return exception if already exists
-        async with self.session.post("{}/createfile".format(self._server_addr,
-                                json={'filename': filename})) as resp:
-            if resp.status != 200:
-                raise Exception("Cannot create file on server", resp.status)
+    def mkfile(self, filename):
+        filename_json = {"filename": filename}
+        try:
+            resp = requests.post('http://{}/mkfile'.format(self._server_addr), json=filename_json)
+        except requests.exceptions.RequestException as e:
+            raise requests.exceptions.RequestException("Cannot request server", e)
+        if resp.status_code == 303:
+            raise FileExistsError("File already exists")
+        if resp.status_code != 201:
+            raise BaseException("Cannot create file on server", resp.status)
 
-    def removefile(self, filename):
-        pass
+    def rmfile(self, filename):
+        filename_json = {"filename": filename}
+        try:
+            resp = requests.post('http://{}/rmfile'.format(self._server_addr), json=filename_json)
+        except requests.exceptions.RequestException as e:
+            raise requests.exceptions.RequestException("Cannot request server", e)
+        if resp.status_code == 404:
+            raise FileNotFoundError("No such file")
+        if resp.status_code != 200:
+            raise BaseException("Server error", resp.status_code)
 
     def readfile(self, filename):
-        # bite reader here
+        # byte reader here
         pass
 
     def writefile(self, filename):
-        # bite writer here
+        # byte writer here
         pass
 
     def appendfile(self, filename):
-        # bite writer here
+        # byte writer here
         pass
 
-    def mkfolder(self, dirname):
-        pass
+    def lsdir(self, dirname):
+        dir_json = {"dirname": dirname}
+        try:
+            resp = requests.post('http://{}/lsdir'.format(self._server_addr), json=dir_json)
+        except requests.exceptions.RequestException as e:
+            raise requests.exceptions.RequestException("Cannot request server", e)
+        if resp.status_code == 404:
+            raise FileNotFoundError("No such folder")
+        if resp.status_code != 200:
+            raise BaseException("Server error", resp.status_code)
+        print(resp.json())
+        return resp.json()["files"]
 
-    def removefolder(self, dirname):
-        pass
+    def mkdir(self, dirname):
+        filename_json = {"dirname": dirname}
+        try:
+            resp = requests.post('http://{}/mkdir'.format(self._server_addr), json=filename_json)
+        except requests.exceptions.RequestException as e:
+            raise requests.exceptions.RequestException("Cannot request server", e)
+        if resp.status_code == 303:
+            raise FileExistsError("Directory already exists")
+        if resp.status_code != 201:
+            raise BaseException("Cannot create directory on server", resp.status)
+
+    def rmdir(self, dirname):
+        dir_json = {"dirname": dirname}
+        try:
+            resp = requests.post('http://{}/rmdir'.format(self._server_addr), json=dir_json)
+        except requests.exceptions.RequestException as e:
+            raise requests.exceptions.RequestException("Cannot request server", e)
+        if resp.status_code == 404:
+            raise FileNotFoundError("No such folder")
+        if resp.status_code != 200:
+            raise BaseException("Server error", resp.status_code)
