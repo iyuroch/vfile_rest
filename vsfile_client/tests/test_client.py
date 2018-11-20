@@ -1,32 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import asyncio
 import pytest
 import vsfile_client
-import time
 import vfile_server
-import unittest
 
-from multiprocessing import Process
-
-# TODO: test exceptions
+# TODO: test concurrent write and append to file
 
 
-# def test_mkfile():
-#     with vsfile_client.VFile("127.0.0.1:8080") as client:
-#         filename = "examplefile"
-#         client.mkfile(filename)
-#         files = client.lsdir("/")
-#         assert filename in files
-#         with pytest.raises(FileExistsError, message="File already exists"):
-#             client.mkfile("examplefile")
-
-# @pytest.fixture(scope="class", autouse=True)
-# def my_fixture():
-#     print ('INITIALIZATION')
-#     # yield param
-#     print ('TEAR DOWN')
 class TestClientDir():
     client = vsfile_client.VFile("127.0.0.1:8080")
     dirname = "/mypath"
@@ -41,7 +22,8 @@ class TestClientDir():
         assert len(self.client.lsdir("/")) == 1
 
     def test_mkdir_exists(self):
-        with pytest.raises(FileExistsError, message="Directory already exists"):
+        with pytest.raises(FileExistsError,
+                           message="Directory already exists"):
             self.client.mkdir(self.dirname)
 
     def test_rmdir(self):
@@ -52,14 +34,14 @@ class TestClientDir():
         with pytest.raises(FileNotFoundError, message="No such folder"):
             self.client.rmdir("empty")
 
+
 class TestClientFile():
     client = vsfile_client.VFile("127.0.0.1:8080")
     filename = "example.txt"
-    
+
     def test_mkfile(self):
         self.client.mkfile(self.filename)
         assert len(self.client.lsdir("/")) == 1
-        
 
     def test_mkfile_exists(self):
         with pytest.raises(FileExistsError, message="File already exists"):
@@ -72,3 +54,24 @@ class TestClientFile():
     def test_rmfile_ntexists(self):
         with pytest.raises(FileNotFoundError, message="No such file"):
             self.client.rmfile("none")
+
+    def test_write_ntfile(self):
+        with pytest.raises(FileNotFoundError, message="No such file"):
+            self.client.writefile("none", "none")
+
+    def test_read_ntfile(self):
+        with pytest.raises(FileNotFoundError, message="No such file"):
+            self.client.readfile("none")
+
+    def test_append_ntfile(self):
+        with pytest.raises(FileNotFoundError, message="No such file"):
+            self.client.appendfile("none", "none")
+
+    def test_readwrite_file(self):
+        self.client.mkfile(self.filename)
+        self.client.writefile(self.filename, "word")
+        assert self.client.readfile(self.filename) == "word"
+
+    def test_readappend_file(self):
+        self.client.appendfile(self.filename, "word")
+        assert self.client.readfile(self.filename) == "wordword"
